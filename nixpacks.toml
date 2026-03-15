@@ -1,8 +1,8 @@
-[phases.setup]
-nixPkgs = ["nodejs-18_x"]
-
 [phases.install]
-cmds = ["npm ci --production"]
+cmds = ["npm install"]
+
+[phases.build]
+cmds = ["echo 'Build complete'"]
 
 [start]
 cmd = "npm run db:migrate && npm start"
