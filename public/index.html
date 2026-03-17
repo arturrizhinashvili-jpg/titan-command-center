@@ -1,485 +1,983 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Titan Command Center</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    :root {
-      --bg: #0a0a0f;
-      --surface: #12121a;
-      --surface2: #1a1a26;
-      --border: #2a2a3a;
-      --text: #e4e4ef;
-      --muted: #8888a0;
-      --accent: #6c5ce7;
-      --accent2: #a29bfe;
-      --green: #00d48a;
-      --red: #ff6b6b;
-      --orange: #ffa94d;
-      --blue: #339af0;
-    }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
-    a { color: var(--accent2); text-decoration: none; }
-    .app { display: flex; min-height: 100vh; }
-    .sidebar { width: 220px; background: var(--surface); border-right: 1px solid var(--border); padding: 20px 0; position: fixed; height: 100vh; overflow-y: auto; }
-    .sidebar-logo { padding: 0 20px 24px; font-size: 18px; font-weight: 700; color: var(--accent2); letter-spacing: 1px; }
-    .sidebar-logo span { color: var(--muted); font-weight: 400; font-size: 11px; display: block; margin-top: 2px; }
-    .nav-item { padding: 10px 20px; cursor: pointer; color: var(--muted); font-size: 13px; transition: all 0.15s; display: flex; align-items: center; gap: 10px; }
-    .nav-item:hover, .nav-item.active { color: var(--text); background: var(--surface2); border-left: 3px solid var(--accent); }
-    .nav-divider { height: 1px; background: var(--border); margin: 12px 20px; }
-    .main { margin-left: 220px; flex: 1; padding: 24px 32px; }
-    .page { display: none; }
-    .page.active { display: block; }
-    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
-    .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 18px; }
-    .stat-card .label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
-    .stat-card .value { font-size: 28px; font-weight: 700; margin-top: 4px; }
-    .stat-card .sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
-    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 20px; }
-    .card-title { font-size: 14px; font-weight: 600; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; }
-    .card-title .badge { background: var(--accent); color: #fff; font-size: 10px; padding: 3px 8px; border-radius: 10px; }
-    table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    th { text-align: left; color: var(--muted); font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; padding: 8px 12px; border-bottom: 1px solid var(--border); }
-    td { padding: 10px 12px; border-bottom: 1px solid var(--border); }
-    tr:hover { background: var(--surface2); }
-    .stage { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
-    .stage-new { background: #1a1a3e; color: var(--blue); }
-    .stage-contacted { background: #1a2a3e; color: #69a5ff; }
-    .stage-replied { background: #1a3a2e; color: #69dba5; }
-    .stage-booked { background: #2a2a1a; color: var(--orange); }
-    .stage-pitched { background: #2a1a3a; color: var(--accent2); }
-    .stage-negotiation { background: #3a2a1a; color: #ffcc5c; }
-    .stage-closed_won { background: #0a2a1a; color: var(--green); }
-    .stage-closed_lost { background: #2a0a0a; color: var(--red); }
-    .kanban { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 12px; }
-    .kanban-col { min-width: 220px; flex: 1; background: var(--surface2); border-radius: 8px; padding: 12px; }
-    .kanban-col-header { font-size: 12px; font-weight: 600; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; display: flex; justify-content: space-between; }
-    .kanban-card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 10px; margin-bottom: 8px; cursor: pointer; font-size: 12px; }
-    .kanban-card:hover { border-color: var(--accent); }
-    .kanban-card .name { font-weight: 600; }
-    .kanban-card .company { color: var(--muted); font-size: 11px; }
-    .kanban-card .value { color: var(--green); font-size: 11px; margin-top: 4px; }
-    .btn { padding: 8px 16px; border-radius: 6px; border: none; cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.15s; }
-    .btn-primary { background: var(--accent); color: #fff; }
-    .btn-primary:hover { background: var(--accent2); }
-    .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
-    .btn-outline:hover { border-color: var(--accent); }
-    .btn-sm { padding: 5px 10px; font-size: 11px; }
-    .pred-card { display: flex; align-items: center; gap: 14px; padding: 12px; border-bottom: 1px solid var(--border); }
-    .pred-score { width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px; }
-    .pred-high { background: #0a2a1a; color: var(--green); border: 2px solid var(--green); }
-    .pred-mid { background: #2a2a1a; color: var(--orange); border: 2px solid var(--orange); }
-    .pred-low { background: #2a0a0a; color: var(--red); border: 2px solid var(--red); }
-    .pred-info .name { font-weight: 600; font-size: 14px; }
-    .pred-info .action { color: var(--accent2); font-size: 12px; margin-top: 2px; }
-    .pred-info .reason { color: var(--muted); font-size: 11px; margin-top: 2px; }
-    .activity-item { display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
-    .activity-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
-    .activity-dot.email_sent { background: var(--blue); }
-    .activity-dot.email_received { background: var(--green); }
-    .activity-dot.call { background: var(--orange); }
-    .activity-dot.meeting { background: var(--accent); }
-    .activity-dot.stage_change { background: var(--accent2); }
-    .activity-dot.note { background: var(--muted); }
-    .form-group { margin-bottom: 12px; }
-    .form-group label { display: block; font-size: 11px; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; }
-    .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 8px 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 13px; }
-    .form-group textarea { min-height: 80px; resize: vertical; }
-    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .refresh-time { font-size: 10px; color: var(--muted); }
-    .loading { opacity: 0.5; pointer-events: none; }
-    .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.6s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .toast { position: fixed; bottom: 20px; right: 20px; background: var(--surface); border: 1px solid var(--accent); border-radius: 8px; padding: 12px 20px; font-size: 13px; z-index: 1000; display: none; }
-    .toast.show { display: block; animation: fadeIn 0.3s; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-    .email-item { padding: 10px 12px; border-bottom: 1px solid var(--border); cursor: pointer; }
-    .email-item:hover { background: var(--surface2); }
-    .email-from { font-weight: 600; font-size: 13px; }
-    .email-subject { font-size: 12px; margin-top: 2px; }
-    .email-snippet { color: var(--muted); font-size: 11px; margin-top: 2px; }
-    .email-date { color: var(--muted); font-size: 10px; float: right; }
-    .campaign-card { background: var(--surface2); border-radius: 8px; padding: 14px; margin-bottom: 10px; }
-    .campaign-name { font-weight: 600; font-size: 14px; }
-    .campaign-status { font-size: 11px; padding: 2px 8px; border-radius: 10px; }
-    .campaign-status.active { background: #0a2a1a; color: var(--green); }
-    .campaign-status.paused { background: #2a2a1a; color: var(--orange); }
-    .campaign-metrics { display: flex; gap: 16px; margin-top: 10px; }
-    .campaign-metric .val { font-size: 18px; font-weight: 700; }
-    .campaign-metric .lbl { font-size: 10px; color: var(--muted); text-transform: uppercase; }
-    @media (max-width: 768px) {
-      .sidebar { width: 60px; }
-      .sidebar-logo, .nav-item span { display: none; }
-      .main { margin-left: 60px; padding: 16px; }
-      .stats-grid { grid-template-columns: 1fr 1fr; }
-      .kanban { flex-direction: column; }
-      .form-row { grid-template-columns: 1fr; }
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TITAN Command Center â Live Dashboard</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0a0e17;
+    --card: #111827;
+    --card-border: #1e293b;
+    --accent: #3b82f6;
+    --accent-glow: rgba(59, 130, 246, 0.3);
+    --green: #10b981;
+    --green-glow: rgba(16, 185, 129, 0.3);
+    --red: #ef4444;
+    --red-glow: rgba(239, 68, 68, 0.2);
+    --yellow: #f59e0b;
+    --yellow-glow: rgba(245, 158, 11, 0.2);
+    --purple: #8b5cf6;
+    --text: #f1f5f9;
+    --text-dim: #94a3b8;
+    --text-muted: #64748b;
+  }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Animated background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background:
+      linear-gradient(rgba(59, 130, 246, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(59, 130, 246, 0.03) 1px, transparent 1px);
+    background-size: 60px 60px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 24px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Header */
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 32px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--card-border);
+  }
+
+  .header-left h1 {
+    font-size: 28px;
+    font-weight: 800;
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: -0.5px;
+  }
+
+  .header-left .subtitle {
+    color: var(--text-dim);
+    font-size: 14px;
+    margin-top: 4px;
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .live-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--green);
+  }
+
+  .live-dot {
+    width: 8px;
+    height: 8px;
+    background: var(--green);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 var(--green-glow); }
+    50% { opacity: 0.7; box-shadow: 0 0 0 8px transparent; }
+  }
+
+  .timestamp {
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+
+  /* KPI Cards Row */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .kpi-card {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+
+  .kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+  }
+
+  .kpi-card .kpi-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+
+  .kpi-card .kpi-value {
+    font-size: 32px;
+    font-weight: 800;
+    letter-spacing: -1px;
+  }
+
+  .kpi-card .kpi-sub {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+
+  .kpi-card::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+  }
+
+  .kpi-card.blue::after { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+  .kpi-card.green::after { background: linear-gradient(90deg, #10b981, #34d399); }
+  .kpi-card.yellow::after { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+  .kpi-card.purple::after { background: linear-gradient(90deg, #8b5cf6, #a78bfa); }
+  .kpi-card.red::after { background: linear-gradient(90deg, #ef4444, #f87171); }
+
+  .kpi-card.blue .kpi-value { color: #60a5fa; }
+  .kpi-card.green .kpi-value { color: #34d399; }
+  .kpi-card.yellow .kpi-value { color: #fbbf24; }
+  .kpi-card.purple .kpi-value { color: #a78bfa; }
+  .kpi-card.red .kpi-value { color: #f87171; }
+
+  /* Main Grid Layout */
+  .main-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 24px;
+  }
+
+  .full-width {
+    grid-column: 1 / -1;
+  }
+
+  /* Section Cards */
+  .section {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--card-border);
+  }
+
+  .section-header h2 {
+    font-size: 15px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .section-header .badge {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 600;
+  }
+
+  .badge-blue { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+  .badge-green { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+  .badge-yellow { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+  .badge-red { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+  .badge-purple { background: rgba(139, 92, 246, 0.15); color: #a78bfa; }
+
+  .section-body {
+    padding: 16px 20px;
+  }
+
+  /* Campaign Table */
+  .campaign-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .campaign-table th {
+    text-align: left;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    font-weight: 600;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--card-border);
+  }
+
+  .campaign-table td {
+    padding: 12px 0;
+    font-size: 13px;
+    border-bottom: 1px solid rgba(30, 41, 59, 0.5);
+  }
+
+  .campaign-table tr:last-child td { border-bottom: none; }
+
+  .status-pill {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .status-active { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+  .status-draft { background: rgba(100, 116, 139, 0.15); color: #94a3b8; }
+  .status-new { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+
+  /* Hot Lead Cards */
+  .hot-lead {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 0;
+    border-bottom: 1px solid rgba(30, 41, 59, 0.5);
+  }
+
+  .hot-lead:last-child { border-bottom: none; }
+
+  .lead-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  .lead-icon.fire { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+  .lead-icon.warm { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+  .lead-icon.meeting { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+
+  .lead-info h4 {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 3px;
+  }
+
+  .lead-info p {
+    font-size: 12px;
+    color: var(--text-dim);
+    line-height: 1.4;
+  }
+
+  .lead-tag {
+    margin-left: auto;
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+
+  /* Revenue Tracker */
+  .revenue-tracker {
+    padding: 20px;
+  }
+
+  .revenue-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 16px;
+  }
+
+  .revenue-target {
+    font-size: 36px;
+    font-weight: 800;
+    color: #34d399;
+  }
+
+  .revenue-current {
+    font-size: 14px;
+    color: var(--text-dim);
+  }
+
+  .progress-bar-container {
+    width: 100%;
+    height: 24px;
+    background: rgba(30, 41, 59, 0.8);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 20px;
+    position: relative;
+  }
+
+  .progress-bar-fill {
+    height: 100%;
+    border-radius: 12px;
+    background: linear-gradient(90deg, #ef4444, #f59e0b, #10b981);
+    transition: width 1.5s ease;
+    position: relative;
+  }
+
+  .progress-bar-fill::after {
+    content: attr(data-percent);
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 11px;
+    font-weight: 700;
+    color: white;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  }
+
+  .revenue-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+  }
+
+  .rev-stat {
+    text-align: center;
+    padding: 12px;
+    background: rgba(30, 41, 59, 0.4);
+    border-radius: 10px;
+  }
+
+  .rev-stat .rev-num {
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--text);
+  }
+
+  .rev-stat .rev-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 4px;
+  }
+
+  /* LinkedIn & Unibox */
+  .msg-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(30, 41, 59, 0.5);
+    font-size: 13px;
+  }
+
+  .msg-item:last-child { border-bottom: none; }
+
+  .msg-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 12px;
+    flex-shrink: 0;
+  }
+
+  .msg-name {
+    font-weight: 600;
+    flex: 1;
+  }
+
+  .msg-preview {
+    color: var(--text-dim);
+    font-size: 12px;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .msg-time {
+    color: var(--text-muted);
+    font-size: 11px;
+    flex-shrink: 0;
+  }
+
+  .unread-dot {
+    width: 8px;
+    height: 8px;
+    background: var(--accent);
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* Platform Status */
+  .platform-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+
+  .platform-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
+    background: rgba(30, 41, 59, 0.3);
+    border-radius: 10px;
+    border: 1px solid transparent;
+  }
+
+  .platform-card.connected { border-color: rgba(16, 185, 129, 0.2); }
+  .platform-card.setup { border-color: rgba(245, 158, 11, 0.2); }
+  .platform-card.error { border-color: rgba(239, 68, 68, 0.2); }
+
+  .platform-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+  }
+
+  .platform-name {
+    font-weight: 600;
+    font-size: 13px;
+  }
+
+  .platform-status {
+    font-size: 11px;
+    margin-left: auto;
+    font-weight: 600;
+  }
+
+  .platform-status.online { color: #34d399; }
+  .platform-status.needs-setup { color: #fbbf24; }
+  .platform-status.offline { color: #f87171; }
+
+  /* Calls section */
+  .call-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(30, 41, 59, 0.5);
+  }
+  .call-item:last-child { border-bottom: none; }
+  .call-icon {
+    width: 34px; height: 34px;
+    border-radius: 8px;
+    background: rgba(139, 92, 246, 0.15);
+    color: #a78bfa;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; flex-shrink: 0;
+  }
+  .call-info { flex: 1; }
+  .call-info h4 { font-size: 13px; font-weight: 600; }
+  .call-info p { font-size: 11px; color: var(--text-dim); }
+  .call-date { font-size: 11px; color: var(--text-muted); }
+
+  /* Upcoming Meetings */
+  .meeting-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: rgba(16, 185, 129, 0.05);
+    border: 1px solid rgba(16, 185, 129, 0.15);
+    border-radius: 10px;
+    margin-bottom: 8px;
+  }
+  .meeting-item:last-child { margin-bottom: 0; }
+  .meeting-time {
+    text-align: center;
+    min-width: 54px;
+    padding: 6px 10px;
+    background: rgba(16, 185, 129, 0.1);
+    border-radius: 8px;
+  }
+  .meeting-time .day { font-size: 10px; color: #34d399; text-transform: uppercase; font-weight: 600; }
+  .meeting-time .time { font-size: 13px; font-weight: 700; color: var(--text); }
+  .meeting-details h4 { font-size: 14px; font-weight: 600; }
+  .meeting-details p { font-size: 12px; color: var(--text-dim); }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    .main-grid { grid-template-columns: 1fr; }
+    .revenue-stats { grid-template-columns: repeat(2, 1fr); }
+    .platform-grid { grid-template-columns: 1fr 1fr; }
+  }
+</style>
 </head>
 <body>
-  <div class="app">
-    <nav class="sidebar">
-      <div class="sidebar-logo">TITAN<span>Command Center</span></div>
-      <div class="nav-item active" data-page="dashboard">&#x1f4ca; <span>Dashboard</span></div>
-      <div class="nav-item" data-page="pipeline">&#x1f504; <span>Pipeline</span></div>
-      <div class="nav-item" data-page="campaigns">&#x1f4e7; <span>Campaigns</span></div>
-      <div class="nav-item" data-page="inbox">&#x1f4ec; <span>Inbox</span></div>
-      <div class="nav-item" data-page="calendar">&#x1f4c5; <span>Calendar</span></div>
-      <div class="nav-item" data-page="calls">&#x1f399;&#xfe0f; <span>Calls</span></div>
-      <div class="nav-divider"></div>
-      <div class="nav-item" data-page="predictions">&#x1f9e0; <span>AI Predictions</span></div>
-      <div class="nav-item" data-page="import">&#x1f4e4; <span>Import Leads</span></div>
-      <div class="nav-divider"></div>
-      <div class="nav-item" id="nav-auth">&#x1f510; <span>Connect Google</span></div>
-    </nav>
-    <div class="main">
-      <div id="page-dashboard" class="page active">
-        <h2 style="margin-bottom:20px">Dashboard</h2>
-        <div id="dash-stats" class="stats-grid"></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
-          <div class="card">
-            <div class="card-title">Pipeline by Stage</div>
-            <div id="dash-pipeline-stages"></div>
-          </div>
-          <div class="card">
-            <div class="card-title">Recent Activity</div>
-            <div id="dash-activity"></div>
-          </div>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:0">
-          <div class="card">
-            <div class="card-title">Lead Sources</div>
-            <div id="dash-sources"></div>
-          </div>
-          <div class="card">
-            <div class="card-title">AI Forecast <span class="badge">Latest</span></div>
-            <div id="dash-forecast"></div>
-          </div>
-        </div>
-      </div>
 
-      <div id="page-pipeline" class="page">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-          <h2>Pipeline</h2>
-          <div style="display:flex;gap:8px">
-            <input id="pipeline-search" placeholder="Search contacts..." style="padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;width:200px">
-            <button class="btn btn-primary" onclick="showAddContact()">+ Add Contact</button>
-          </div>
-        </div>
-        <div id="pipeline-kanban" class="kanban"></div>
-        <div class="card" style="margin-top:20px">
-          <div class="card-title">All Contacts</div>
-          <table>
-            <thead><tr><th>Name</th><th>Company</th><th>Email</th><th>Stage</th><th>Value</th><th>Source</th><th>Last Updated</th></tr></thead>
-            <tbody id="pipeline-table"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <div id="page-campaigns" class="page">
-        <h2 style="margin-bottom:20px">Instantly Campaigns</h2>
-        <div id="campaigns-list"></div>
-      </div>
-
-      <div id="page-inbox" class="page">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-          <h2>Inbox</h2>
-          <button class="btn btn-primary" onclick="showCompose()">&#x2709; Compose</button>
-        </div>
-        <div class="card"><div id="inbox-list"></div></div>
-        <div id="compose-modal" class="card" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:500px;z-index:100;border:1px solid var(--accent)">
-          <div class="card-title">Compose Email <span style="cursor:pointer" onclick="document.getElementById('compose-modal').style.display='none'">&#x2715;</span></div>
-          <div class="form-group"><label>To</label><input id="compose-to"></div>
-          <div class="form-group"><label>Subject</label><input id="compose-subject"></div>
-          <div class="form-group"><label>Body</label><textarea id="compose-body"></textarea></div>
-          <button class="btn btn-primary" onclick="sendEmail()">Send</button>
-        </div>
-      </div>
-
-      <div id="page-calendar" class="page">
-        <h2 style="margin-bottom:20px">Upcoming Meetings</h2>
-        <div id="calendar-list" class="card"></div>
-      </div>
-
-      <div id="page-calls" class="page">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-          <h2>Call Recordings</h2>
-          <button class="btn btn-outline" onclick="syncFathom()">&#x1f504; Sync Fathom</button>
-        </div>
-        <div id="calls-list" class="card"></div>
-      </div>
-
-      <div id="page-predictions" class="page">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-          <h2>AI Predictions</h2>
-          <button class="btn btn-primary" onclick="runPredictions()">&#x1f9e0; Run Now</button>
-        </div>
-        <div class="card">
-          <div class="card-title">Revenue Forecast</div>
-          <div id="pred-forecast"></div>
-        </div>
-        <div class="card">
-          <div class="card-title">Contact Close Likelihood</div>
-          <div id="pred-contacts"></div>
-        </div>
-        <div class="card">
-          <div class="card-title">Underperforming Campaigns</div>
-          <div id="pred-campaigns"></div>
-        </div>
-      </div>
-
-      <div id="page-import" class="page">
-        <h2 style="margin-bottom:20px">Import Leads</h2>
-        <div class="card">
-          <div class="card-title">CSV Upload (LinkedIn / Boomerang / Sales Nav)</div>
-          <p style="color:var(--muted);font-size:12px;margin-bottom:14px">Upload a CSV with columns like: Email, First Name, Last Name, Company, Title, Phone, LinkedIn URL</p>
-          <form id="import-form" enctype="multipart/form-data">
-            <input type="file" id="import-file" accept=".csv" style="margin-bottom:12px">
-            <br><button type="submit" class="btn btn-primary">Upload &amp; Import</button>
-          </form>
-          <div id="import-result" style="margin-top:14px"></div>
-        </div>
-      </div>
-
-      <div id="contact-modal" class="card" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:500px;z-index:100;border:1px solid var(--accent)">
-        <div class="card-title">Add Contact <span style="cursor:pointer" onclick="document.getElementById('contact-modal').style.display='none'">&#x2715;</span></div>
-        <div class="form-row">
-          <div class="form-group"><label>First Name</label><input id="c-first"></div>
-          <div class="form-group"><label>Last Name</label><input id="c-last"></div>
-        </div>
-        <div class="form-group"><label>Email</label><input id="c-email"></div>
-        <div class="form-row">
-          <div class="form-group"><label>Company</label><input id="c-company"></div>
-          <div class="form-group"><label>Title</label><input id="c-title"></div>
-        </div>
-        <div class="form-row">
-          <div class="form-group"><label>Phone</label><input id="c-phone"></div>
-          <div class="form-group"><label>Stage</label>
-            <select id="c-stage"><option>new</option><option>contacted</option><option>replied</option><option>booked</option><option>pitched</option><option>negotiation</option><option>closed_won</option><option>closed_lost</option></select>
-          </div>
-        </div>
-        <div class="form-group"><label>LinkedIn URL</label><input id="c-linkedin"></div>
-        <div class="form-group"><label>Notes</label><textarea id="c-notes"></textarea></div>
-        <button class="btn btn-primary" onclick="saveContact()">Save Contact</button>
-      </div>
-
+<div class="container">
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-left">
+      <h1>TITAN Command Center</h1>
+      <div class="subtitle">Titan Outbound â Real-Time Operations Dashboard</div>
+    </div>
+    <div class="header-right">
+      <div class="live-badge"><div class="live-dot"></div> LIVE</div>
+      <div class="timestamp">March 16, 2026 &bull; Monday</div>
     </div>
   </div>
-  <div id="toast" class="toast"></div>
-  <script>
-    const API = window.location.origin;
 
-    document.querySelectorAll('.nav-item[data-page]').forEach(el => {
-      el.addEventListener('click', () => {
-        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-        el.classList.add('active');
-        document.getElementById('page-' + el.dataset.page).classList.add('active');
-        loadPage(el.dataset.page);
-      });
-    });
-    document.getElementById('nav-auth').addEventListener('click', () => window.location.href = API + '/auth/google');
+  <!-- KPI ROW -->
+  <div class="kpi-grid">
+    <div class="kpi-card blue">
+      <div class="kpi-label">Emails Sent (4 Weeks)</div>
+      <div class="kpi-value">1,800</div>
+      <div class="kpi-sub">Instantly &bull; Fire Protection Campaign</div>
+    </div>
+    <div class="kpi-card yellow">
+      <div class="kpi-label">Reply Rate</div>
+      <div class="kpi-value">4.79%</div>
+      <div class="kpi-sub">29 replies from 605 sequences</div>
+    </div>
+    <div class="kpi-card green">
+      <div class="kpi-label">Opportunities</div>
+      <div class="kpi-value">2</div>
+      <div class="kpi-sub">Active pipeline deals</div>
+    </div>
+    <div class="kpi-card purple">
+      <div class="kpi-label">Meetings This Week</div>
+      <div class="kpi-value">2</div>
+      <div class="kpi-sub">David Monfre (Tue) &bull; Bryan (Wed)</div>
+    </div>
+    <div class="kpi-card red">
+      <div class="kpi-label">Days to Target</div>
+      <div class="kpi-value">45</div>
+      <div class="kpi-sub">$100K goal &bull; April 30 deadline</div>
+    </div>
+  </div>
 
-    async function api(path, opts = {}) {
-      try {
-        const r = await fetch(API + path, { credentials: 'include', ...opts });
-        return await r.json();
-      } catch (err) {
-        console.error('API Error:', path, err);
-        return { success: false, error: err.message };
-      }
-    }
+  <!-- REVENUE TRACKER â FULL WIDTH -->
+  <div class="section full-width" style="margin-bottom: 24px;">
+    <div class="section-header">
+      <h2>Revenue Tracker <span class="badge badge-green">$100K TARGET</span></h2>
+      <span style="font-size: 12px; color: var(--text-muted);">$3,000 per deal &bull; Deadline: April 30, 2026</span>
+    </div>
+    <div class="revenue-tracker">
+      <div class="revenue-header">
+        <div>
+          <div style="font-size: 13px; color: var(--text-dim); margin-bottom: 4px;">Current Revenue</div>
+          <div class="revenue-target">$0</div>
+        </div>
+        <div style="text-align: right;">
+          <div style="font-size: 13px; color: var(--text-dim); margin-bottom: 4px;">Target</div>
+          <div style="font-size: 28px; font-weight: 800; color: var(--text);">$100,000</div>
+        </div>
+      </div>
+      <div class="progress-bar-container">
+        <div class="progress-bar-fill" style="width: 2%;" data-percent="0%"></div>
+      </div>
+      <div class="revenue-stats">
+        <div class="rev-stat">
+          <div class="rev-num" style="color: #f87171;">45</div>
+          <div class="rev-label">Days Remaining</div>
+        </div>
+        <div class="rev-stat">
+          <div class="rev-num" style="color: #fbbf24;">34</div>
+          <div class="rev-label">Deals Needed</div>
+        </div>
+        <div class="rev-stat">
+          <div class="rev-num" style="color: #60a5fa;">0.76</div>
+          <div class="rev-label">Deals / Day</div>
+        </div>
+        <div class="rev-stat">
+          <div class="rev-num" style="color: #a78bfa;">5.3</div>
+          <div class="rev-label">Deals / Week</div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-    function toast(msg) {
-      const t = document.getElementById('toast');
-      t.textContent = msg; t.classList.add('show');
-      setTimeout(() => t.classList.remove('show'), 3000);
-    }
+  <!-- MAIN GRID -->
+  <div class="main-grid">
 
-    function fmt$(n) { return '$' + (Number(n) || 0).toLocaleString(); }
-    function fmtDate(d) { return d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '\u2014'; }
-    function stageHtml(s) { return '<span class="stage stage-' + s + '">' + s.replace('_', ' ') + '</span>'; }
+    <!-- LEFT: HOT LEADS -->
+    <div class="section">
+      <div class="section-header">
+        <h2>Hot Leads <span class="badge badge-red">ACTION NEEDED</span></h2>
+      </div>
+      <div class="section-body">
+        <div class="hot-lead">
+          <div class="lead-icon meeting">DM</div>
+          <div class="lead-info">
+            <h4>David Monfre</h4>
+            <p>Calendly booking confirmed &bull; 30 min meeting<br>Tomorrow, Tue Mar 17 at 9:00 AM ET</p>
+          </div>
+          <div class="lead-tag badge-green">MEETING BOOKED</div>
+        </div>
+        <div class="hot-lead">
+          <div class="lead-icon fire">BG</div>
+          <div class="lead-info">
+            <h4>Bryan Garren â Integrity Fire Protection</h4>
+            <p>"I will call you back around 12 noon..."<br>Follow-up call Wed Mar 18 at 12:00 PM ET</p>
+          </div>
+          <div class="lead-tag badge-yellow">CALL SCHEDULED</div>
+        </div>
+        <div class="hot-lead">
+          <div class="lead-icon warm">AB</div>
+          <div class="lead-info">
+            <h4>Adam Borkacki</h4>
+            <p>Zoom call completed Mar 10 &bull; Meeting assets generated<br>Agreed to postpone then reconnected</p>
+          </div>
+          <div class="lead-tag badge-blue">FOLLOW UP</div>
+        </div>
+      </div>
+    </div>
 
-    async function loadPage(page) {
-      const loaders = { dashboard: loadDashboard, pipeline: loadPipeline, campaigns: loadCampaigns, inbox: loadInbox, calendar: loadCalendar, calls: loadCalls, predictions: loadPredictions };
-      if (loaders[page]) await loaders[page]();
-    }
+    <!-- RIGHT: UPCOMING MEETINGS -->
+    <div class="section">
+      <div class="section-header">
+        <h2>Upcoming Meetings <span class="badge badge-green">THIS WEEK</span></h2>
+      </div>
+      <div class="section-body">
+        <div class="meeting-item">
+          <div class="meeting-time">
+            <div class="day">TUE</div>
+            <div class="time">9:00</div>
+          </div>
+          <div class="meeting-details">
+            <h4>David Monfre â 30 Min Meeting</h4>
+            <p>Calendly booking &bull; david_monfre@yahoo.com</p>
+          </div>
+        </div>
+        <div class="meeting-item">
+          <div class="meeting-time">
+            <div class="day">WED</div>
+            <div class="time">12:00</div>
+          </div>
+          <div class="meeting-details">
+            <h4>Bryan Garren â Integrity Fire Protection</h4>
+            <p>Follow-up call &bull; integrityfireprotection911@gmail.com</p>
+          </div>
+        </div>
+        <div style="margin-top: 16px; padding: 12px; background: rgba(59, 130, 246, 0.05); border: 1px solid rgba(59, 130, 246, 0.15); border-radius: 10px;">
+          <div style="font-size: 12px; color: var(--text-dim);">Otter.ai detected upcoming meeting:</div>
+          <div style="font-size: 13px; font-weight: 600; margin-top: 4px;">David Monfre and Titan â preparing assets</div>
+        </div>
+      </div>
+    </div>
 
-    async function loadDashboard() {
-      const { data } = await api('/api/dashboard/stats');
-      if (!data) return;
-      const p = data.pipeline;
-      document.getElementById('dash-stats').innerHTML =
-        '<div class="stat-card"><div class="label">Total Contacts</div><div class="value">' + p.total_contacts + '</div></div>' +
-        '<div class="stat-card"><div class="label">Pipeline Value</div><div class="value" style="color:var(--accent2)">' + fmt$(p.pipeline_value) + '</div></div>' +
-        '<div class="stat-card"><div class="label">Revenue Won</div><div class="value" style="color:var(--green)">' + fmt$(p.revenue_won) + '</div></div>' +
-        '<div class="stat-card"><div class="label">Booked Calls</div><div class="value" style="color:var(--orange)">' + p.booked + '</div></div>' +
-        '<div class="stat-card"><div class="label">Replied</div><div class="value">' + p.replied + '</div></div>' +
-        '<div class="stat-card"><div class="label">Closed Won</div><div class="value" style="color:var(--green)">' + p.closed_won + '</div></div>';
+    <!-- INSTANTLY CAMPAIGNS -->
+    <div class="section">
+      <div class="section-header">
+        <h2>Instantly Campaigns <span class="badge badge-blue">3 CAMPAIGNS</span></h2>
+      </div>
+      <div class="section-body">
+        <table class="campaign-table">
+          <tr>
+            <th>Campaign</th>
+            <th>Status</th>
+            <th>Sent</th>
+            <th>Reply %</th>
+          </tr>
+          <tr>
+            <td style="font-weight: 600;">Fire Protection Outbound â Q2 2026</td>
+            <td><span class="status-pill status-active">Active</span></td>
+            <td>1,776</td>
+            <td style="color: #34d399; font-weight: 600;">4.8%</td>
+          </tr>
+          <tr>
+            <td>MCA Outreach â March 2026</td>
+            <td><span class="status-pill status-draft">Draft</span></td>
+            <td>â</td>
+            <td>â</td>
+          </tr>
+          <tr>
+            <td>MCA Campaign</td>
+            <td><span class="status-pill status-draft">Draft</span></td>
+            <td>â</td>
+            <td>â</td>
+          </tr>
+        </table>
+        <div style="margin-top: 16px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+          <div style="text-align: center; padding: 10px; background: rgba(30, 41, 59, 0.4); border-radius: 8px;">
+            <div style="font-size: 20px; font-weight: 800; color: #60a5fa;">0%</div>
+            <div style="font-size: 10px; color: var(--text-muted); margin-top: 2px;">OPEN RATE</div>
+          </div>
+          <div style="text-align: center; padding: 10px; background: rgba(30, 41, 59, 0.4); border-radius: 8px;">
+            <div style="font-size: 20px; font-weight: 800; color: #fbbf24;">4.79%</div>
+            <div style="font-size: 10px; color: var(--text-muted); margin-top: 2px;">REPLY RATE</div>
+          </div>
+          <div style="text-align: center; padding: 10px; background: rgba(30, 41, 59, 0.4); border-radius: 8px;">
+            <div style="font-size: 20px; font-weight: 800; color: #34d399;">29</div>
+            <div style="font-size: 10px; color: var(--text-muted); margin-top: 2px;">TOTAL REPLIES</div>
+          </div>
+        </div>
+      </div>
+    </div>
 
-      var stages = ['new','contacted','replied','booked','pitched','negotiation','closed_won','closed_lost'];
-      document.getElementById('dash-pipeline-stages').innerHTML = stages.map(function(s) {
-        return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)">' + stageHtml(s) + ' <span style="color:var(--muted)">' + (p[s] || 0) + '</span></div>';
-      }).join('');
+    <!-- UNIBOX / INSTANTLY REPLIES -->
+    <div class="section">
+      <div class="section-header">
+        <h2>Instantly Unibox <span class="badge badge-yellow">24 CONVERSATIONS</span></h2>
+      </div>
+      <div class="section-body">
+        <div class="msg-item">
+          <div class="msg-avatar" style="background: rgba(239,68,68,0.15); color: #f87171;">N</div>
+          <div class="msg-name">Nate</div>
+          <div class="msg-preview">Last outreach sent</div>
+          <div class="msg-time">Mar 15</div>
+        </div>
+        <div class="msg-item">
+          <div class="msg-avatar" style="background: rgba(100,116,139,0.15); color: #94a3b8;">A</div>
+          <div class="msg-name">anaegle@alarmcontrol.com</div>
+          <div class="msg-preview">not interested</div>
+          <div class="msg-time">Mar 10</div>
+        </div>
+        <div class="msg-item">
+          <div class="msg-avatar" style="background: rgba(100,116,139,0.15); color: #94a3b8;">C</div>
+          <div class="msg-name">cgray@thorpedesign.com</div>
+          <div class="msg-preview">Unsubscribe</div>
+          <div class="msg-time">Mar 10</div>
+        </div>
+        <div class="msg-item">
+          <div class="msg-avatar" style="background: rgba(245,158,11,0.15); color: #fbbf24;">C</div>
+          <div class="msg-name">cvisocky@alertone.us</div>
+          <div class="msg-preview">Acknowledged â replied</div>
+          <div class="msg-time">Mar 10</div>
+        </div>
+        <div class="msg-item">
+          <div class="msg-avatar" style="background: rgba(245,158,11,0.15); color: #fbbf24;">T</div>
+          <div class="msg-name">tracys@firestopsouthwest.com</div>
+          <div class="msg-preview">Acknowledged â replied</div>
+          <div class="msg-time">Mar 10</div>
+        </div>
+        <div class="msg-item">
+          <div class="msg-avatar" style="background: rgba(139,92,246,0.15); color: #a78bfa;">A</div>
+          <div class="msg-name">aide@bcfdmo.com</div>
+          <div class="msg-preview">Follow-up conversation</div>
+          <div class="msg-time">Mar 10</div>
+        </div>
+        <div style="text-align: center; padding: 8px; color: var(--text-muted); font-size: 12px;">
+          + 18 more conversations in Unibox
+        </div>
+      </div>
+    </div>
 
-      document.getElementById('dash-activity').innerHTML = (data.recentActivities || []).slice(0, 8).map(function(a) {
-        return '<div class="activity-item"><div class="activity-dot ' + a.type + '"></div><div><div>' + (a.subject || a.type) + '</div><div style="color:var(--muted);font-size:10px">' + fmtDate(a.created_at) + '</div></div></div>';
-      }).join('') || '<div style="color:var(--muted);font-size:12px">No recent activity</div>';
+    <!-- LINKEDIN -->
+    <div class="section">
+      <div class="section-header">
+        <h2>LinkedIn Activity <span class="badge badge-blue">2 NOTIFICATIONS</span></h2>
+      </div>
+      <div class="section-body">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px;">
+          <div style="text-align: center; padding: 10px; background: rgba(30, 41, 59, 0.4); border-radius: 8px;">
+            <div style="font-size: 20px; font-weight: 800; color: #60a5fa;">0</div>
+            <div style="font-size: 10px; color: var(--text-muted); margin-top: 2px;">PENDING CONNECTIONS</div>
+          </div>
+          <div style="text-align: center; padding: 10px; background: rgba(30, 41, 59, 0.4); border-radius: 8px;">
+            <div style="font-size: 20px; font-weight: 800; color: #fbbf24;">1</div>
+            <div style="font-size: 10px; color: var(--text-muted); margin-top: 2px;">UNREAD MESSAGES</div>
+          </div>
+        </div>
+        <div class="msg-item">
+          <div class="unread-dot"></div>
+          <div class="msg-avatar" style="background: rgba(59,130,246,0.15); color: #60a5fa;">JV</div>
+          <div class="msg-name">Jenny Rose Vicente</div>
+          <div class="msg-time">10:55 AM</div>
+        </div>
+        <div class="msg-item">
+          <div class="msg-avatar" style="background: rgba(139,92,246,0.15); color: #a78bfa;">SS</div>
+          <div class="msg-name">Sabaa Shyamlee</div>
+          <div class="msg-time">10:55 AM</div>
+        </div>
+        <div class="msg-item">
+          <div class="msg-avatar" style="background: rgba(16,185,129,0.15); color: #34d399;">RB</div>
+          <div class="msg-name">Robert Blake-Ward</div>
+          <div class="msg-time">7:49 AM</div>
+        </div>
+        <div class="msg-item">
+          <div class="msg-avatar" style="background: rgba(245,158,11,0.15); color: #fbbf24;">DM</div>
+          <div class="msg-name">David Monfre</div>
+          <div class="msg-time">Mar 15</div>
+        </div>
+        <div class="msg-item">
+          <div class="msg-avatar" style="background: rgba(100,116,139,0.15); color: #94a3b8;">LW</div>
+          <div class="msg-name">Lisa Williams</div>
+          <div class="msg-time">Mar 13</div>
+        </div>
+      </div>
+    </div>
 
-      document.getElementById('dash-sources').innerHTML = (data.sources || []).map(function(s) {
-        return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px"><span>' + s.source + '</span><span style="color:var(--accent2)">' + s.count + '</span></div>';
-      }).join('') || '<div style="color:var(--muted);font-size:12px">No data</div>';
+    <!-- CALL RECORDINGS -->
+    <div class="section">
+      <div class="section-header">
+        <h2>Recent Calls <span class="badge badge-purple">ZOOM + FATHOM</span></h2>
+      </div>
+      <div class="section-body">
+        <div style="padding: 10px; background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.15); border-radius: 8px; margin-bottom: 12px; font-size: 12px; color: #f87171;">
+          Fathom: Network error â trial account, no company data connected yet
+        </div>
+        <div class="call-item">
+          <div class="call-icon">&#128222;</div>
+          <div class="call-info">
+            <h4>Adam Borkacki: 30 Minute Meeting</h4>
+            <p>Zoom &bull; Meeting assets generated &bull; AI summary available</p>
+          </div>
+          <div class="call-date">Mar 10</div>
+        </div>
+        <div class="call-item">
+          <div class="call-icon">&#128222;</div>
+          <div class="call-info">
+            <h4>Bryan: 30 Minute Meeting</h4>
+            <p>Zoom &bull; iPhone (4) joined &bull; Integrity Fire Protection</p>
+          </div>
+          <div class="call-date">Mar 10</div>
+        </div>
+        <div class="call-item">
+          <div class="call-icon">&#128222;</div>
+          <div class="call-info">
+            <h4>ACE: 30 Minute Meeting</h4>
+            <p>Zoom &bull; Insufficient transcript for summary</p>
+          </div>
+          <div class="call-date">Mar 10</div>
+        </div>
+      </div>
+    </div>
 
-      var f = data.latestForecast;
-      document.getElementById('dash-forecast').innerHTML = f
-        ? '<div style="font-size:24px;font-weight:700;color:var(--green)">' + fmt$(f.weighted_forecast) + '</div><div style="color:var(--muted);font-size:12px;margin-top:4px">Pipeline: ' + fmt$(f.total_pipeline) + '</div><div style="margin-top:8px;font-size:12px">' + (f.insights || '') + '</div>'
-        : '<div style="color:var(--muted);font-size:12px">Run AI predictions to generate forecast</div>';
-    }
-    async function loadPipeline() {
-      const { data, stages } = await api('/api/pipeline');
-      if (!data) return;
-      var stageOrder = ['new','contacted','replied','booked','pitched','negotiation','closed_won','closed_lost'];
-      var grouped = {};
-      stageOrder.forEach(function(s) { grouped[s] = []; });
-      data.forEach(function(c) { if (grouped[c.stage]) grouped[c.stage].push(c); });
+    <!-- PLATFORM STATUS â FULL WIDTH -->
+    <div class="section full-width">
+      <div class="section-header">
+        <h2>Platform Status</h2>
+      </div>
+      <div class="section-body">
+        <div class="platform-grid">
+          <div class="platform-card connected">
+            <div class="platform-icon" style="background: rgba(59,130,246,0.15);">&#9993;</div>
+            <div>
+              <div class="platform-name">Instantly</div>
+              <div style="font-size: 11px; color: var(--text-muted);">3,100 credits &bull; 1 active campaign</div>
+            </div>
+            <div class="platform-status online">Connected</div>
+          </div>
+          <div class="platform-card connected">
+            <div class="platform-icon" style="background: rgba(239,68,68,0.15);">&#9993;</div>
+            <div>
+              <div class="platform-name">Gmail</div>
+              <div style="font-size: 11px; color: var(--text-muted);">arthur@titanoutbound.com</div>
+            </div>
+            <div class="platform-status online">Connected</div>
+          </div>
+          <div class="platform-card connected">
+            <div class="platform-icon" style="background: rgba(59,130,246,0.15);">in</div>
+            <div>
+              <div class="platform-name">LinkedIn</div>
+              <div style="font-size: 11px; color: var(--text-muted);">Arthur Rosen profile</div>
+            </div>
+            <div class="platform-status online">Connected</div>
+          </div>
+          <div class="platform-card setup">
+            <div class="platform-icon" style="background: rgba(245,158,11,0.15);">&#9993;</div>
+            <div>
+              <div class="platform-name">Lemlist</div>
+              <div style="font-size: 11px; color: var(--text-muted);">0 campaigns &bull; needs setup</div>
+            </div>
+            <div class="platform-status needs-setup">Needs Setup</div>
+          </div>
+          <div class="platform-card error">
+            <div class="platform-icon" style="background: rgba(139,92,246,0.15);">&#127909;</div>
+            <div>
+              <div class="platform-name">Fathom</div>
+              <div style="font-size: 11px; color: var(--text-muted);">Trial &bull; no company connected</div>
+            </div>
+            <div class="platform-status offline">Error</div>
+          </div>
+          <div class="platform-card connected">
+            <div class="platform-icon" style="background: rgba(16,185,129,0.15);">&#128197;</div>
+            <div>
+              <div class="platform-name">Calendly</div>
+              <div style="font-size: 11px; color: var(--text-muted);">PAT connected &bull; all scopes</div>
+            </div>
+            <div class="platform-status online">Connected</div>
+          </div>
+        </div>
+      </div>
+    </div>
 
-      document.getElementById('pipeline-kanban').innerHTML = stageOrder.map(function(s) {
-        return '<div class="kanban-col"><div class="kanban-col-header"><span>' + s.replace('_',' ').toUpperCase() + '</span><span>' + grouped[s].length + '</span></div>' +
-          grouped[s].slice(0, 10).map(function(c) {
-            return '<div class="kanban-card"><div class="name">' + c.first_name + ' ' + c.last_name + '</div><div class="company">' + (c.company || '\u2014') + '</div><div class="value">' + fmt$(c.deal_value) + '</div></div>';
-          }).join('') + '</div>';
-      }).join('');
+    <!-- LEMLIST STATUS -->
+    <div class="section full-width">
+      <div class="section-header">
+        <h2>Lemlist <span class="badge badge-yellow">NEEDS SETUP</span></h2>
+      </div>
+      <div class="section-body">
+        <div style="display: flex; align-items: center; gap: 16px; padding: 16px; background: rgba(245, 158, 11, 0.05); border: 1px solid rgba(245, 158, 11, 0.15); border-radius: 10px;">
+          <div style="font-size: 32px;">&#9888;&#65039;</div>
+          <div>
+            <div style="font-weight: 700; font-size: 14px; margin-bottom: 4px;">Lemlist account is fresh â 0 of 6 setup tasks completed</div>
+            <div style="font-size: 12px; color: var(--text-dim);">
+              No campaigns created &bull; No leads imported &bull; No sending email connected &bull; 0 hot leads &bull; 0 contacts in database
+            </div>
+            <div style="font-size: 12px; color: var(--text-muted); margin-top: 6px;">
+              <strong>Next steps:</strong> Import leads, connect sending email, create first campaign, launch outreach
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
-      document.getElementById('pipeline-table').innerHTML = data.map(function(c) {
-        return '<tr><td><strong>' + c.first_name + ' ' + c.last_name + '</strong></td><td>' + (c.company || '\u2014') + '</td><td>' + c.email + '</td><td>' + stageHtml(c.stage) + '</td><td>' + fmt$(c.deal_value) + '</td><td>' + c.source + '</td><td>' + fmtDate(c.updated_at) + '</td></tr>';
-      }).join('');
-    }
+  </div>
+</div>
 
-    async function loadCampaigns() {
-      const { data } = await api('/api/instantly/campaigns');
-      document.getElementById('campaigns-list').innerHTML = (data || []).map(function(c) {
-        var s = c.stats || {};
-        return '<div class="campaign-card"><div style="display:flex;justify-content:space-between;align-items:center"><div class="campaign-name">' + c.name + '</div><span class="campaign-status ' + (c.status === 1 || c.status === 'active' ? 'active' : 'paused') + '">' + (c.status === 1 || c.status === 'active' ? 'Active' : 'Paused') + '</span></div><div class="campaign-metrics"><div class="campaign-metric"><div class="val">' + (s.total_leads || s.leads_count || 0) + '</div><div class="lbl">Leads</div></div><div class="campaign-metric"><div class="val">' + (s.emails_sent || s.sent || 0) + '</div><div class="lbl">Sent</div></div><div class="campaign-metric"><div class="val">' + (s.opens || s.opened || 0) + '</div><div class="lbl">Opens</div></div><div class="campaign-metric"><div class="val">' + (s.replies || s.replied || 0) + '</div><div class="lbl">Replies</div></div><div class="campaign-metric"><div class="val">' + (s.bounced || 0) + '</div><div class="lbl">Bounced</div></div></div></div>';
-      }).join('') || '<div class="card"><div style="color:var(--muted)">No campaigns found. Check your Instantly API key.</div></div>';
-    }
+<script>
+  // Animate progress bar on load
+  setTimeout(() => {
+    document.querySelector('.progress-bar-fill').style.width = '2%';
+  }, 500);
 
-    async function loadInbox() {
-      const { data } = await api('/api/gmail/inbox?limit=30');
-      document.getElementById('inbox-list').innerHTML = (data || []).map(function(m) {
-        return '<div class="email-item"><div class="email-date">' + fmtDate(m.date) + '</div><div class="email-from">' + m.from + '</div><div class="email-subject">' + m.subject + '</div><div class="email-snippet">' + m.snippet + '</div></div>';
-      }).join('') || '<div style="color:var(--muted);padding:12px">Connect Google to see your inbox</div>';
-    }
-
-    async function loadCalendar() {
-      const { data } = await api('/api/calendar/upcoming?days=14');
-      document.getElementById('calendar-list').innerHTML = (data || []).map(function(e) {
-        return '<div style="display:flex;justify-content:space-between;padding:12px;border-bottom:1px solid var(--border)"><div><div style="font-weight:600">' + e.summary + '</div><div style="color:var(--muted);font-size:12px">' + fmtDate(e.start) + ' \u2014 ' + (e.attendees ? e.attendees.map(function(a){return a.email}).join(', ') : 'No attendees') + '</div></div>' + (e.meetLink ? '<a href="' + e.meetLink + '" target="_blank" class="btn btn-sm btn-outline">Join</a>' : '') + '</div>';
-      }).join('') || '<div style="color:var(--muted);padding:12px">Connect Google to see your calendar</div>';
-    }
-
-    async function loadCalls() {
-      const { data } = await api('/api/fathom/calls');
-      var calls = Array.isArray(data) ? data : (data && data.data ? data.data : []);
-      document.getElementById('calls-list').innerHTML = calls.map(function(c) {
-        return '<div style="padding:12px;border-bottom:1px solid var(--border)"><div style="display:flex;justify-content:space-between"><div style="font-weight:600">' + (c.title || 'Call') + '</div><div style="color:var(--muted);font-size:11px">' + fmtDate(c.call_date || c.created_at) + '</div></div><div style="color:var(--muted);font-size:12px;margin-top:4px">' + (c.summary || 'No summary available') + '</div>' + (c.recording_url ? '<a href="' + c.recording_url + '" target="_blank" style="font-size:11px">Play Recording</a>' : '') + '</div>';
-      }).join('') || '<div style="color:var(--muted);padding:12px">No calls found. Add your Fathom API key to sync.</div>';
-    }
-
-    async function syncFathom() {
-      toast('Syncing Fathom calls...');
-      await api('/api/fathom/sync', { method: 'POST' });
-      toast('Fathom sync complete');
-      loadCalls();
-    }
-    async function loadPredictions() {
-      const { data } = await api('/api/predictions');
-      if (!data) return;
-      var f = data.forecast;
-      document.getElementById('pred-forecast').innerHTML = f
-        ? '<div style="display:flex;gap:24px;margin-bottom:12px"><div><div style="color:var(--muted);font-size:11px">TOTAL PIPELINE</div><div style="font-size:24px;font-weight:700">' + fmt$(f.total_pipeline) + '</div></div><div><div style="color:var(--muted);font-size:11px">WEIGHTED FORECAST</div><div style="font-size:24px;font-weight:700;color:var(--green)">' + fmt$(f.weighted_forecast) + '</div></div></div><div style="font-size:13px">' + (f.insights || '') + '</div><div class="refresh-time">Last updated: ' + fmtDate(data.lastUpdated) + '</div>'
-        : '<div style="color:var(--muted)">Click "Run Now" to generate predictions</div>';
-
-      document.getElementById('pred-contacts').innerHTML = (data.contactPredictions || []).map(function(p) {
-        var cls = p.close_likelihood >= 70 ? 'pred-high' : p.close_likelihood >= 40 ? 'pred-mid' : 'pred-low';
-        return '<div class="pred-card"><div class="pred-score ' + cls + '">' + Math.round(p.close_likelihood) + '%</div><div class="pred-info"><div class="name">' + p.first_name + ' ' + p.last_name + ' \u2014 ' + (p.company || '') + '</div><div class="action">' + p.best_follow_up + '</div><div class="reason">' + p.reasoning + '</div></div></div>';
-      }).join('') || '<div style="color:var(--muted)">No predictions yet</div>';
-
-      document.getElementById('pred-campaigns').innerHTML = (data.underperformingCampaigns || []).map(function(c) {
-        return '<div style="padding:10px;border-bottom:1px solid var(--border)"><div style="font-weight:600;color:var(--red)">' + c.name + '</div><div style="font-size:12px;color:var(--muted)">' + c.issue + '</div><div style="font-size:12px;color:var(--accent2);margin-top:2px">\u2192 ' + c.recommendation + '</div></div>';
-      }).join('') || '<div style="color:var(--muted)">All campaigns performing well</div>';
-    }
-
-    async function runPredictions() {
-      toast('Running AI analysis... this may take 30s');
-      await api('/api/predictions/run', { method: 'POST' });
-      toast('Predictions updated!');
-      loadPredictions();
-    }
-
-    function showCompose() { document.getElementById('compose-modal').style.display = 'block'; }
-    function showAddContact(prefill) {
-      var m = document.getElementById('contact-modal');
-      m.style.display = 'block';
-      if (prefill) {
-        document.getElementById('c-first').value = prefill.first_name || '';
-        document.getElementById('c-last').value = prefill.last_name || '';
-        document.getElementById('c-email').value = prefill.email || '';
-        document.getElementById('c-company').value = prefill.company || '';
-        document.getElementById('c-title').value = prefill.title || '';
-        document.getElementById('c-phone').value = prefill.phone || '';
-        document.getElementById('c-stage').value = prefill.stage || 'new';
-        document.getElementById('c-linkedin').value = prefill.linkedin_url || '';
-        document.getElementById('c-notes').value = prefill.notes || '';
-      }
-    }
-
-    async function sendEmail() {
-      var body = { to: document.getElementById('compose-to').value, subject: document.getElementById('compose-subject').value, body: document.getElementById('compose-body').value };
-      var r = await api('/api/gmail/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-      if (r.success) { toast('Email sent!'); document.getElementById('compose-modal').style.display = 'none'; }
-      else toast('Error: ' + r.error);
-    }
-
-    async function saveContact() {
-      var body = {
-        email: document.getElementById('c-email').value,
-        first_name: document.getElementById('c-first').value,
-        last_name: document.getElementById('c-last').value,
-        company: document.getElementById('c-company').value,
-        title: document.getElementById('c-title').value,
-        phone: document.getElementById('c-phone').value,
-        stage: document.getElementById('c-stage').value,
-        linkedin_url: document.getElementById('c-linkedin').value,
-        notes: document.getElementById('c-notes').value
-      };
-      var r = await api('/api/pipeline/contact', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-      if (r.success) { toast('Contact saved!'); document.getElementById('contact-modal').style.display = 'none'; loadPipeline(); }
-      else toast('Error: ' + r.error);
-    }
-
-    document.getElementById('import-form').addEventListener('submit', async function(e) {
-      e.preventDefault();
-      var file = document.getElementById('import-file').files[0];
-      if (!file) return toast('Select a CSV file');
-      var fd = new FormData();
-      fd.append('file', file);
-      var r = await api('/api/leads/import', { method: 'POST', body: fd });
-      document.getElementById('import-result').innerHTML = r.success
-        ? '<div style="color:var(--green)">Imported ' + r.imported + ' of ' + r.total + ' leads' + (r.errors ? ' (' + r.errors + ' errors)' : '') + '</div>'
-        : '<div style="color:var(--red)">' + r.error + '</div>';
-    });
-
-    var searchTimer;
-    var pSearch = document.getElementById('pipeline-search');
-    if (pSearch) pSearch.addEventListener('input', function(e) {
-      clearTimeout(searchTimer);
-      searchTimer = setTimeout(function() { loadPipeline(e.target.value); }, 300);
-    });
-
-    loadDashboard();
-  </script>
+  // Update timestamp
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+</script>
 </body>
 </html>
